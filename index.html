@@ -466,15 +466,25 @@ function runClean() {
     if (metaPattern.test(probe)) continue;
 
     if (partHeaderPattern.test(probe)) {
-      const prevIdx = cleaned.findLastIndex(e => e.trim() !== '');
+      // findLastIndex 폴리필 (ES2023 미지원 구형 브라우저/WebView 대응)
+      let prevIdx = -1;
+      for (let j = cleaned.length - 1; j >= 0; j--) {
+        if (cleaned[j].trim() !== '') { prevIdx = j; break; }
+      }
       // 헤더 뒤 빈 줄 건너뛰고 실제 내용 줄 찾기
       let nextIdx = i + 1;
-      while (nextIdx < lines.length && lines[nextIdx].trim() === '') nextIdx++;
+      let emptyCount = 0;
+      while (nextIdx < lines.length && lines[nextIdx].trim() === '') {
+        emptyCount++;
+        nextIdx++;
+      }
       const hasPrev = prevIdx !== -1;
       const hasNext = nextIdx < lines.length;
       if (hasPrev && hasNext) {
         const nextLine = lines[nextIdx].replace(/^\s+/, '');
-        cleaned[prevIdx] = cleaned[prevIdx] + nextLine;
+        // 분할 지점에 원래 있던 빈 줄(단락 구분) 보존
+        const separator = emptyCount > 0 ? '\n'.repeat(emptyCount + 1) : '';
+        cleaned[prevIdx] = cleaned[prevIdx] + separator + nextLine;
         i = nextIdx;
       }
       continue;
